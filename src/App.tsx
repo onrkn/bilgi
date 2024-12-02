@@ -1,13 +1,24 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { GameRoom } from './components/GameRoom';
 import { Question } from './components/Question';
 import { Chat } from './components/Chat';
 import { ServerStatus } from './components/ServerStatus';
+import { UserSetup } from './components/UserSetup';
 import { useGameStore } from './store/gameStore';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
-  const gameStatus = useGameStore((state) => state.gameStatus);
+  const { gameStatus, roomCode } = useGameStore();
+
+  if (!roomCode) {
+    return (
+      <>
+        <UserSetup />
+        <ServerStatus />
+        <Toaster position="top-right" />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
