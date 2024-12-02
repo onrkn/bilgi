@@ -8,52 +8,91 @@ export const Lobby: React.FC = () => {
   const [roomCode, setRoomCode] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { setRoom, setPlayer } = useGameStore();
-  const { socket, connect } = useSocketStore();
+  const { socket, connect, isConnected } = useSocketStore();
 
   useEffect(() => {
     if (!socket) {
       connect();
     }
+  }, []);
 
-    if (socket) {
-      socket.on('roomCreated', (room) => {
-        setRoom(room);
-        setPlayer(room.players[0]);
-        toast.success('Room created successfully!');
-      });
+  useEffect(() => {
+    if (!socket) return;
 
-      socket.on('roomUpdated', (room) => {
-        setRoom(room);
-        const player = room.players.find(p => p.id === socket.id);
-        if (player) {
-          setPlayer(player);
-        }
-      });
+    const handleRoomCreated = (room: any) => {
+      setIsLoading(false);
+      setRoom(room);
+      setPlayer(room.players[0]);
+      toast.success('Oda başarıyla oluşturuldu!');
+    };
 
-      socket.on('error', (message) => {
-        toast.error(message);
-      });
+    const handleRoomUpdated = (room: any) => {
+      setIsLoading(false);
+      setRoom(room);
+      const player = room.players.find((p: any) => p.id === socket.id);
+      if (player) {
+        setPlayer(player);
+        toast.success('Odaya başarıyla katıldınız!');
+      }
+    };
 
-      return () => {
-        socket.off('roomCreated');
-        socket.off('roomUpdated');
-        socket.off('error');
-      };
-    }
+    const handleError = (message: string) => {
+      setIsLoading(false);
+      toast.error(message);
+    };
+
+    socket.on('roomCreated', handleRoomCreated);
+    socket.on('roomUpdated', handleRoomUpdated);
+    socket.on('error', handleError);
+
+    return () => {
+      socket.off('roomCreated', handleRoomCreated);
+      socket.off('roomUpdated', handleRoomUpdated);
+      socket.off('error', handleError);
+    };
   }, [socket]);
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!socket) return;
-    
-    socket.emit('joinRoom', { roomCode, playerName });
+    if (!socket) {
+      toast.error('Sunucu bağlantısı kurulamadı. Lütfen tekrar deneyin.');
+      return;
+    }
+
+    if (!isConnected) {
+      toast.error('Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.');
+      return;
+    }
+
+    if (!roomCode.trim() || !playerName.trim()) {
+      toast.error('Lütfen tüm alanları doldurun.');
+      return;
+    }
+
+    setIsLoading(true);
+    socket.emit('joinRoom', { roomCode: roomCode.toUpperCase(), playerName });
   };
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!socket) return;
+    if (!socket) {
+      toast.error('Sunucu bağlantısı kurulamadı. Lütfen tekrar deneyin.');
+      return;
+    }
 
+    if (!isConnected) {
+      toast.error('Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.');
+      return;
+    }
+
+    if (!playerName.trim()) {
+      toast.error('Lütfen isminizi girin.');
+      return;
+    }
+
+    setIsLoading(true);
     socket.emit('createRoom', { playerName });
   };
 
@@ -69,7 +108,7 @@ export const Lobby: React.FC = () => {
             <form onSubmit={handleCreateRoom} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Your Name
+                  İsminiz
                 </label>
                 <input
                   type="text"
@@ -77,21 +116,27 @@ export const Lobby: React.FC = () => {
                   onChange={(e) => setPlayerName(e.target.value)}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
+                  disabled={isLoading}
                 />
               </div>
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                disabled={isLoading || !isConnected}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2 ${
+                  isLoading || !isConnected
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                } text-white rounded-lg transition-colors`}
               >
                 <Plus className="w-5 h-5" />
-                Create Room
+                {isLoading ? 'Oda Oluşturuluyor...' : 'Oda Oluştur'}
               </button>
             </form>
           ) : (
             <form onSubmit={handleJoinRoom} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Your Name
+                  İsminiz
                 </label>
                 <input
                   type="text"
@@ -99,11 +144,12 @@ export const Lobby: React.FC = () => {
                   onChange={(e) => setPlayerName(e.target.value)}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Room Code
+                  Oda Kodu
                 </label>
                 <input
                   type="text"
@@ -111,14 +157,22 @@ export const Lobby: React.FC = () => {
                   onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
+                  disabled={isLoading}
+                  maxLength={6}
+                  placeholder="Örn: ABC123"
                 />
               </div>
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                disabled={isLoading || !isConnected}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2 ${
+                  isLoading || !isConnected
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                } text-white rounded-lg transition-colors`}
               >
                 <LogIn className="w-5 h-5" />
-                Join Room
+                {isLoading ? 'Odaya Katılınıyor...' : 'Odaya Katıl'}
               </button>
             </form>
           )}
@@ -127,8 +181,9 @@ export const Lobby: React.FC = () => {
             <button
               onClick={() => setIsCreating(!isCreating)}
               className="text-blue-500 hover:text-blue-600 transition-colors"
+              disabled={isLoading}
             >
-              {isCreating ? "Join existing room" : "Create new room"}
+              {isCreating ? "Mevcut odaya katıl" : "Yeni oda oluştur"}
             </button>
           </div>
         </div>

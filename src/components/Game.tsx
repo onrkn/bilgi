@@ -8,11 +8,13 @@ export const Game: React.FC = () => {
   const { room, player } = useGameStore();
   const { socket } = useSocketStore();
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('gameStartCountdown', () => {
+    const handleGameStart = () => {
+      toast.success('Oyun başlıyor!');
       setCountdown(5);
       const timer = setInterval(() => {
         setCountdown((prev) => {
@@ -23,27 +25,42 @@ export const Game: React.FC = () => {
           return prev - 1;
         });
       }, 1000);
-    });
+    };
+
+    const handleRoomUpdated = (updatedRoom: any) => {
+      if (updatedRoom.gameState === 'countdown' && room?.gameState !== 'countdown') {
+        handleGameStart();
+      }
+      setSelectedAnswer(null);
+    };
+
+    socket.on('gameStartCountdown', handleGameStart);
+    socket.on('roomUpdated', handleRoomUpdated);
 
     return () => {
-      socket.off('gameStartCountdown');
+      socket.off('gameStartCountdown', handleGameStart);
+      socket.off('roomUpdated', handleRoomUpdated);
     };
-  }, [socket]);
+  }, [socket, room?.gameState]);
 
   const handleReady = () => {
     if (!socket || !room) return;
     socket.emit('playerReady', { roomId: room.id });
+    toast.success('Hazır olduğunuzu bildirdiniz!');
   };
 
   const handleAnswer = (answerIndex: number) => {
-    if (!socket || !room) return;
+    if (!socket || !room || selectedAnswer !== null) return;
+    setSelectedAnswer(answerIndex);
     socket.emit('submitAnswer', { roomId: room.id, answerIndex });
   };
 
   if (!room || !player) return null;
 
   const currentPlayer = room.players.find(p => p.id === player.id);
+  const otherPlayer = room.players.find(p => p.id !== player.id);
   const isPlayerReady = currentPlayer?.isReady;
+  const isOtherPlayerReady = otherPlayer?.isReady;
 
   return (
     <div className="w-full max-w-3xl bg-white rounded-lg shadow-lg p-8">
@@ -74,13 +91,26 @@ export const Game: React.FC = () => {
       </div>
 
       {room.gameState === 'waiting' && (
-        <div className="text-center">
+        <div className="text-center space-y-4">
+          <div className="text-gray-600">
+            {room.players.length < 2 ? (
+              'Diğer oyuncunun katılması bekleniyor...'
+            ) : !isPlayerReady ? (
+              'Hazır olduğunuzda butona tıklayın'
+            ) : !isOtherPlayerReady ? (
+              'Diğer oyuncunun hazır olması bekleniyor...'
+            ) : (
+              'Oyun başlıyor!'
+            )}
+          </div>
           <button
             onClick={handleReady}
-            disabled={isPlayerReady}
+            disabled={isPlayerReady || room.players.length < 2}
             className={`px-6 py-3 rounded-lg ${
               isPlayerReady
                 ? 'bg-green-500 text-white cursor-not-allowed'
+                : room.players.length < 2
+                ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-blue-500 text-white hover:bg-blue-600'
             } transition-colors`}
           >
@@ -97,12 +127,33 @@ export const Game: React.FC = () => {
               <button
                 key={index}
                 onClick={() => handleAnswer(index)}
-                className="p-4 text-left rounded-lg border-2 hover:border-blue-500 transition-colors"
+                disabled={selectedAnswer !== null}
+                className={`p-4 text-left rounded-lg border-2 transition-colors ${
+                  selectedAnswer === index
+                    ? 'bg-blue-100 border-blue-500'
+                    : selectedAnswer !== null
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:border-blue-500'
+                }`}
               >
                 {option}
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {room.gameState === 'finished' && (
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold">
+            {currentPlayer.score >= 100 ? 'Tebrikler, kazandınız!' : 'Maalesef kaybettiniz!'}
+          </h2>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Yeni Oyun
+          </button>
         </div>
       )}
     </div>
