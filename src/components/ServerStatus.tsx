@@ -1,21 +1,25 @@
 import React from 'react';
-import { useSocketStore } from '../services/socket';
+import { useGameStore } from '../store/gameStore';
 import { Wifi, WifiOff } from 'lucide-react';
 
 export const ServerStatus: React.FC = () => {
-  const { isConnected } = useSocketStore();
+  const serverStatus = useGameStore((state) => state.serverStatus);
 
   return (
-    <div className="fixed bottom-4 right-4 flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-lg">
-      {isConnected ? (
+    <div
+      className={`fixed bottom-4 right-4 px-4 py-2 rounded-full flex items-center gap-2 ${
+        serverStatus === 'connected'
+          ? 'bg-green-100 text-green-800'
+          : 'bg-red-100 text-red-800'
+      }`}
+    >
+      {serverStatus === 'connected' ? (
         <>
-          <Wifi className="w-5 h-5 text-green-500" />
-          <span className="text-sm text-green-500">Connected</span>
+          <Wifi size={20} /> Connected
         </>
       ) : (
         <>
-          <WifiOff className="w-5 h-5 text-red-500" />
-          <span className="text-sm text-red-500">Disconnected</span>
+          <WifiOff size={20} /> Disconnected
         </>
       )}
     </div>

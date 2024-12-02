@@ -1,24 +1,28 @@
-import React from 'react';
-import { useGameStore } from './store/gameStore';
-import { Lobby } from './components/Lobby';
-import { Game } from './components/Game';
+import React, { useEffect } from 'react';
+import { GameRoom } from './components/GameRoom';
+import { Question } from './components/Question';
 import { Chat } from './components/Chat';
 import { ServerStatus } from './components/ServerStatus';
+import { useGameStore } from './store/gameStore';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
-  const { room } = useGameStore();
+  const gameStatus = useGameStore((state) => state.gameStatus);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <Toaster position="top-right" />
-      <div className="max-w-7xl mx-auto flex gap-8">
-        <div className="flex-1">
-          {!room ? <Lobby /> : <Game />}
+      <div className="max-w-6xl mx-auto space-y-8">
+        <GameRoom />
+        
+        {gameStatus === 'playing' && <Question />}
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Chat />
         </div>
-        <Chat />
       </div>
+      
       <ServerStatus />
+      <Toaster position="top-right" />
     </div>
   );
 }

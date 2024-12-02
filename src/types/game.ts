@@ -5,12 +5,12 @@ export interface Player {
   isReady: boolean;
 }
 
-export interface Room {
+export interface Message {
   id: string;
-  players: Player[];
-  currentQuestion?: Question;
-  gameState: 'waiting' | 'countdown' | 'playing' | 'finished';
-  messages: Message[];
+  text: string;
+  type: 'system' | 'user';
+  sender?: string;
+  timestamp: number;
 }
 
 export interface Question {
@@ -20,10 +20,13 @@ export interface Question {
   correctAnswer: number;
 }
 
-export interface Message {
-  id: string;
-  type: 'chat' | 'system';
-  sender?: string;
-  content: string;
-  timestamp: number;
+export interface GameState {
+  roomCode: string;
+  players: Player[];
+  currentQuestion: Question | null;
+  messages: Message[];
+  gameStatus: 'waiting' | 'countdown' | 'playing' | 'finished';
+  countdown: number;
+  answers: Record<string, number>;
+  serverStatus: 'connected' | 'disconnected';
 }

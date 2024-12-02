@@ -1,25 +1,40 @@
 import { create } from 'zustand';
-import { Room, Player, Message } from '../types/game';
+import { GameState, Message, Player, Question } from '../types/game';
 
-interface GameState {
-  room: Room | null;
-  player: Player | null;
-  setRoom: (room: Room) => void;
-  setPlayer: (player: Player) => void;
+interface GameStore extends GameState {
+  setRoomCode: (code: string) => void;
+  setPlayers: (players: Player[]) => void;
+  setCurrentQuestion: (question: Question | null) => void;
   addMessage: (message: Message) => void;
-  resetGame: () => void;
+  setGameStatus: (status: GameState['gameStatus']) => void;
+  setCountdown: (count: number) => void;
+  setAnswers: (answers: Record<string, number>) => void;
+  setServerStatus: (status: GameState['serverStatus']) => void;
+  reset: () => void;
 }
 
-export const useGameStore = create<GameState>((set) => ({
-  room: null,
-  player: null,
-  setRoom: (room) => set({ room }),
-  setPlayer: (player) => set({ player }),
+const initialState: GameState = {
+  roomCode: '',
+  players: [],
+  currentQuestion: null,
+  messages: [],
+  gameStatus: 'waiting',
+  countdown: 5,
+  answers: {},
+  serverStatus: 'disconnected',
+};
+
+export const useGameStore = create<GameStore>((set) => ({
+  ...initialState,
+  setRoomCode: (code) => set({ roomCode: code }),
+  setPlayers: (players) => set({ players }),
+  setCurrentQuestion: (question) => set({ currentQuestion: question }),
   addMessage: (message) => set((state) => ({
-    room: state.room ? {
-      ...state.room,
-      messages: [...state.room.messages, message]
-    } : null
+    messages: [...state.messages, message],
   })),
-  resetGame: () => set({ room: null, player: null })
+  setGameStatus: (status) => set({ gameStatus: status }),
+  setCountdown: (count) => set({ countdown: count }),
+  setAnswers: (answers) => set({ answers }),
+  setServerStatus: (status) => set({ serverStatus: status }),
+  reset: () => set(initialState),
 }));
