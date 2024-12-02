@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useGameStore } from '../store/gameStore';
 import { Users, UserPlus, LogIn } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSocket } from '../hooks/useSocket';
 
 export const UserSetup: React.FC = () => {
   const [username, setUsername] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [mode, setMode] = useState<'create' | 'join'>('create');
+  const { createRoom, joinRoom } = useSocket();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +22,10 @@ export const UserSetup: React.FC = () => {
       return;
     }
 
-    // Socket connection will be handled here
     if (mode === 'create') {
-      // Create room
+      createRoom(username);
     } else {
-      // Join room
+      joinRoom(roomCode, username);
     }
   };
 
