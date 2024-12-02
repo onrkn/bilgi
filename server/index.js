@@ -3,7 +3,12 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { questions } from './questions.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
@@ -17,6 +22,14 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+
+// Serve static files
+app.use(express.static(join(__dirname, 'public')));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 const rooms = new Map();
 const POINTS_PER_CORRECT_ANSWER = 10;
@@ -105,7 +118,6 @@ io.on('connection', (socket) => {
     if (Object.keys(room.answers).length === 2) {
       const currentQuestion = room.questions[room.currentQuestionIndex];
       
-      // Calculate scores
       Object.entries(room.answers).forEach(([playerId, playerAnswer]) => {
         const player = room.players.find(p => p.id === playerId);
         if (player && playerAnswer === currentQuestion.correctAnswer) {
@@ -113,7 +125,6 @@ io.on('connection', (socket) => {
         }
       });
 
-      // Check for winner
       const winner = room.players.find(p => p.score >= WINNING_SCORE);
       if (winner) {
         io.to(roomCode).emit('gameOver', winner);
