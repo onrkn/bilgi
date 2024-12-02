@@ -3,29 +3,27 @@ export interface Player {
   name: string;
   score: number;
   isReady: boolean;
-  currentAnswer?: string;
-}
-
-export interface Question {
-  id: string;
-  text: string;
-  options: string[];
-  correctAnswer: string;
 }
 
 export interface Room {
   id: string;
   players: Player[];
   currentQuestion?: Question;
-  messages: Message[];
   gameState: 'waiting' | 'countdown' | 'playing' | 'finished';
-  countdown: number;
+  messages: Message[];
+}
+
+export interface Question {
+  id: number;
+  question: string;
+  options: string[];
+  correctAnswer: number;
 }
 
 export interface Message {
   id: string;
-  text: string;
   type: 'chat' | 'system';
   sender?: string;
+  content: string;
   timestamp: number;
 }

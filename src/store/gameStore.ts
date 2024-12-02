@@ -7,9 +7,7 @@ interface GameState {
   setRoom: (room: Room) => void;
   setPlayer: (player: Player) => void;
   addMessage: (message: Message) => void;
-  updateGameState: (state: Room['gameState']) => void;
-  updateCountdown: (count: number) => void;
-  reset: () => void;
+  resetGame: () => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -17,19 +15,11 @@ export const useGameStore = create<GameState>((set) => ({
   player: null,
   setRoom: (room) => set({ room }),
   setPlayer: (player) => set({ player }),
-  addMessage: (message) =>
-    set((state) => ({
-      room: state.room
-        ? { ...state.room, messages: [...state.room.messages, message] }
-        : null,
-    })),
-  updateGameState: (gameState) =>
-    set((state) => ({
-      room: state.room ? { ...state.room, gameState } : null,
-    })),
-  updateCountdown: (countdown) =>
-    set((state) => ({
-      room: state.room ? { ...state.room, countdown } : null,
-    })),
-  reset: () => set({ room: null, player: null }),
+  addMessage: (message) => set((state) => ({
+    room: state.room ? {
+      ...state.room,
+      messages: [...state.room.messages, message]
+    } : null
+  })),
+  resetGame: () => set({ room: null, player: null })
 }));

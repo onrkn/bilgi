@@ -1,5 +1,5 @@
 {
-  "name": "multiplayer-quiz-game",
+  "name": "quiz-game-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -15,7 +15,7 @@
     "react-dom": "^18.3.1",
     "socket.io-client": "^4.7.4",
     "zustand": "^4.5.2",
-    "clsx": "^2.1.0"
+    "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

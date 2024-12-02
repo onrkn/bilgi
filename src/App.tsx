@@ -1,14 +1,22 @@
 import React from 'react';
-import { Home } from './components/Home';
-import { GameRoom } from './components/GameRoom';
 import { useGameStore } from './store/gameStore';
+import { Lobby } from './components/Lobby';
+import { Game } from './components/Game';
+import { Chat } from './components/Chat';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const { room } = useGameStore();
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {room ? <GameRoom /> : <Home />}
+    <div className="min-h-screen bg-gray-100 p-8">
+      <Toaster position="top-right" />
+      <div className="max-w-7xl mx-auto flex gap-8">
+        <div className="flex-1">
+          {!room ? <Lobby /> : <Game />}
+        </div>
+        <Chat />
+      </div>
     </div>
   );
 }
