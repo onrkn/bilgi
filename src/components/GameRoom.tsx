@@ -39,13 +39,20 @@ export const GameRoom: React.FC = () => {
       )
     : null;
 
+  const otherPlayer = room.players.find(p => p.id !== player.id);
+
   return (
     <div className="container mx-auto p-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Oda: {room.id}</h2>
+              <div>
+                <h2 className="text-2xl font-bold">Oda: {room.id}</h2>
+                <p className="text-sm text-gray-600">
+                  {room.players.length}/2 Oyuncu
+                </p>
+              </div>
               {room.gameState === 'countdown' && (
                 <div className="flex items-center gap-2">
                   <Timer className="animate-pulse" />
@@ -58,53 +65,87 @@ export const GameRoom: React.FC = () => {
               {room.players.map((p) => (
                 <div
                   key={p.id}
-                  className="bg-gray-50 p-4 rounded-lg flex justify-between items-center"
+                  className={clsx(
+                    "p-4 rounded-lg flex justify-between items-center",
+                    p.id === player.id ? "bg-blue-50" : "bg-gray-50"
+                  )}
                 >
                   <div>
-                    <h3 className="font-semibold">{p.name}</h3>
+                    <h3 className="font-semibold">{p.name} {p.id === player.id && "(Sen)"}</h3>
                     <p className="text-sm text-gray-600">Puan: {p.score}</p>
                   </div>
                   <div
-                    className={`w-3 h-3 rounded-full ${
-                      p.isReady ? 'bg-green-500' : 'bg-gray-300'
-                    }`}
+                    className={clsx(
+                      "w-3 h-3 rounded-full",
+                      p.isReady ? "bg-green-500" : "bg-gray-300"
+                    )}
                   />
                 </div>
               ))}
             </div>
 
             {room.gameState === 'waiting' && (
-              <button
-                onClick={handleReady}
-                className={clsx(
-                  'w-full p-4 rounded-lg text-white',
-                  player.isReady ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
+              <div className="space-y-4">
+                {room.players.length < 2 ? (
+                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                    <p className="text-yellow-700">Diğer oyuncuyu bekleniyor...</p>
+                    <p className="text-sm text-yellow-600">Oda kodunu paylaşın: {room.id}</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleReady}
+                    className={clsx(
+                      'w-full p-4 rounded-lg text-white',
+                      player.isReady ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'
+                    )}
+                  >
+                    {player.isReady ? 'Hazır Değil' : 'Hazır'}
+                  </button>
                 )}
-              >
-                {player.isReady ? 'Hazır Değil' : 'Hazır'}
-              </button>
+              </div>
             )}
 
             {currentQuestion && room.gameState === 'playing' && (
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="text-xl mb-4">{currentQuestion.text}</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {currentQuestion.options.map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => handleAnswer(option)}
-                      disabled={selectedAnswer !== null}
-                      className={clsx(
-                        'p-4 rounded-lg shadow transition',
-                        selectedAnswer === option
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-white hover:bg-blue-50',
-                        selectedAnswer && 'cursor-not-allowed'
+              <div className="space-y-6">
+                <div className="bg-blue-50 p-6 rounded-lg">
+                  <h3 className="text-xl mb-4">{currentQuestion.text}</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {currentQuestion.options.map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => handleAnswer(option)}
+                        disabled={selectedAnswer !== null}
+                        className={clsx(
+                          'p-4 rounded-lg shadow transition',
+                          selectedAnswer === option
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-white hover:bg-blue-50',
+                          selectedAnswer && 'cursor-not-allowed'
+                        )}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm text-gray-600">Durum:</p>
+                    <p className="font-medium">
+                      {!selectedAnswer ? (
+                        'Cevabınızı seçin'
+                      ) : otherPlayer?.currentAnswer ? (
+                        'Diğer oyuncu da cevap verdi'
+                      ) : (
+                        'Diğer oyuncu bekleniyor...'
                       )}
-                    >
-                      {option}
-                    </button>
-                  ))}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Soru:</p>
+                    <p className="font-medium">{room.currentQuestionIndex + 1}/{room.questions.length}</p>
+                  </div>
                 </div>
               </div>
             )}

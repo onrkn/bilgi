@@ -12,22 +12,46 @@ export function setupGameHandlers(io, roomManager) {
     });
 
     socket.on('joinRoom', ({ roomId, playerName }, callback) => {
-      const player = { id: socket.id, name: playerName };
-      const room = roomManager.joinRoom(roomId, player);
-
+      const room = roomManager.getRoom(roomId);
       if (!room) {
-        callback({ success: false, error: 'Oda bulunamadı veya dolu' });
+        callback({ success: false, error: 'Oda bulunamadı' });
         return;
       }
 
+      if (room.players.length >= 2) {
+        callback({ success: false, error: 'Oda dolu' });
+        return;
+      }
+
+      const player = { id: socket.id, name: playerName };
+      const updatedRoom = roomManager.joinRoom(roomId, player);
+
       socket.join(roomId);
-      io.to(roomId).emit('roomUpdated', room);
-      callback({ success: true, room });
+      io.to(roomId).emit('roomUpdated', updatedRoom);
+      callback({ success: true, room: updatedRoom });
+
+      // Sistem mesajı ekle
+      roomManager.addMessage(roomId, {
+        id: Date.now().toString(),
+        text: `${playerName} odaya katıldı`,
+        type: 'system',
+        timestamp: Date.now()
+      });
+      io.to(roomId).emit('roomUpdated', updatedRoom);
     });
 
     socket.on('ready', ({ roomId, isReady }) => {
       const room = roomManager.updatePlayerReady(roomId, socket.id, isReady);
       if (!room) return;
+
+      // Sistem mesajı ekle
+      const player = room.players.find(p => p.id === socket.id);
+      roomManager.addMessage(roomId, {
+        id: Date.now().toString(),
+        text: `${player?.name} ${isReady ? 'hazır' : 'hazır değil'}`,
+        type: 'system',
+        timestamp: Date.now()
+      });
 
       io.to(roomId).emit('roomUpdated', room);
 
@@ -58,18 +82,43 @@ export function setupGameHandlers(io, roomManager) {
       const room = roomManager.submitAnswer(roomId, socket.id, answer);
       if (!room) return;
 
+      const player = room.players.find(p => p.id === socket.id);
+      roomManager.addMessage(roomId, {
+        id: Date.now().toString(),
+        text: `${player?.name} cevabını verdi`,
+        type: 'system',
+        timestamp: Date.now()
+      });
+
       io.to(roomId).emit('roomUpdated', room);
 
       const allAnswered = room.players.every(p => p.currentAnswer !== null);
       if (allAnswered) {
         const currentQuestion = room.questions[room.currentQuestionIndex];
         
+        // Doğru cevabı ve puanları bildir
+        roomManager.addMessage(roomId, {
+          id: Date.now().toString(),
+          text: `Doğru cevap: ${currentQuestion.correctAnswer}`,
+          type: 'system',
+          timestamp: Date.now()
+        });
+
         setTimeout(() => {
           if (room.currentQuestionIndex < room.questions.length - 1) {
             roomManager.nextQuestion(roomId);
             io.to(roomId).emit('roomUpdated', room);
           } else {
             room.gameState = 'finished';
+            const winner = room.players.reduce((prev, current) => 
+              prev.score > current.score ? prev : current
+            );
+            roomManager.addMessage(roomId, {
+              id: Date.now().toString(),
+              text: `Oyun bitti! Kazanan: ${winner.name} (${winner.score} puan)`,
+              type: 'system',
+              timestamp: Date.now()
+            });
             io.to(roomId).emit('roomUpdated', room);
           }
         }, 2000);
@@ -77,27 +126,41 @@ export function setupGameHandlers(io, roomManager) {
     });
 
     socket.on('chatMessage', ({ roomId, message }) => {
-      const room = roomManager.addMessage(roomId, {
+      const room = roomManager.getRoom(roomId);
+      if (!room) return;
+
+      const player = room.players.find(p => p.id === socket.id);
+      if (!player) return;
+
+      const updatedRoom = roomManager.addMessage(roomId, {
         id: Date.now().toString(),
         text: message,
-        sender: socket.id,
+        sender: player.name,
         type: 'chat',
         timestamp: Date.now()
       });
-      if (room) {
-        io.to(roomId).emit('roomUpdated', room);
+
+      if (updatedRoom) {
+        io.to(roomId).emit('roomUpdated', updatedRoom);
       }
     });
 
     socket.on('playAgain', ({ roomId }) => {
       const room = roomManager.resetRoom(roomId);
       if (room) {
+        roomManager.addMessage(roomId, {
+          id: Date.now().toString(),
+          text: 'Yeni oyun başlıyor!',
+          type: 'system',
+          timestamp: Date.now()
+        });
         io.to(roomId).emit('roomUpdated', room);
       }
     });
 
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id);
+      // TODO: Odadan çıkış işlemleri eklenebilir
     });
   });
 }
