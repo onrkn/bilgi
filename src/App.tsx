@@ -3,6 +3,7 @@ import { useGameStore } from './store/gameStore';
 import { Lobby } from './components/Lobby';
 import { Game } from './components/Game';
 import { Chat } from './components/Chat';
+import { ServerStatus } from './components/ServerStatus';
 import { Toaster } from 'react-hot-toast';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         </div>
         <Chat />
       </div>
+      <ServerStatus />
     </div>
   );
 }

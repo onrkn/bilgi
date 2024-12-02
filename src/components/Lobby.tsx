@@ -1,20 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { useSocketStore } from '../services/socket';
 import { Users, Plus, LogIn } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export const Lobby: React.FC = () => {
   const [roomCode, setRoomCode] = useState('');
   const [playerName, setPlayerName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const { setRoom, setPlayer } = useGameStore();
+  const { socket, connect } = useSocketStore();
+
+  useEffect(() => {
+    if (!socket) {
+      connect();
+    }
+
+    if (socket) {
+      socket.on('roomCreated', (room) => {
+        setRoom(room);
+        setPlayer(room.players[0]);
+        toast.success('Room created successfully!');
+      });
+
+      socket.on('roomUpdated', (room) => {
+        setRoom(room);
+        const player = room.players.find(p => p.id === socket.id);
+        if (player) {
+          setPlayer(player);
+        }
+      });
+
+      socket.on('error', (message) => {
+        toast.error(message);
+      });
+
+      return () => {
+        socket.off('roomCreated');
+        socket.off('roomUpdated');
+        socket.off('error');
+      };
+    }
+  }, [socket]);
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
-    // Socket logic will be implemented here
+    if (!socket) return;
+    
+    socket.emit('joinRoom', { roomCode, playerName });
   };
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
-    // Socket logic will be implemented here
+    if (!socket) return;
+
+    socket.emit('createRoom', { playerName });
   };
 
   return (
@@ -35,7 +75,7 @@ export const Lobby: React.FC = () => {
                   type="text"
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
@@ -57,7 +97,7 @@ export const Lobby: React.FC = () => {
                   type="text"
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
@@ -68,8 +108,8 @@ export const Lobby: React.FC = () => {
                 <input
                   type="text"
                   value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
