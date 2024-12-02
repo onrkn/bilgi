@@ -8,6 +8,7 @@ export const Home: React.FC = () => {
   const [name, setName] = useState('');
   const [roomId, setRoomId] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const socketService = useSocket();
   const { setRoom, setPlayer } = useGameStore();
@@ -15,6 +16,7 @@ export const Home: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     try {
       if (mode === 'create') {
@@ -34,7 +36,10 @@ export const Home: React.FC = () => {
         }
       }
     } catch (err) {
-      setError('Bir hata oluştu. Lütfen tekrar deneyin.');
+      setError('Sunucuya bağlanırken bir hata oluştu. Lütfen tekrar deneyin.');
+      console.error('Connection error:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -53,14 +58,16 @@ export const Home: React.FC = () => {
           <div className="space-y-4">
             <button
               onClick={() => setMode('create')}
-              className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white p-4 rounded-lg hover:bg-blue-600"
+              className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white p-4 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+              disabled={isLoading}
             >
               <Plus size={20} />
               Oda Oluştur
             </button>
             <button
               onClick={() => setMode('join')}
-              className="w-full flex items-center justify-center gap-2 bg-green-500 text-white p-4 rounded-lg hover:bg-green-600"
+              className="w-full flex items-center justify-center gap-2 bg-green-500 text-white p-4 rounded-lg hover:bg-green-600 disabled:opacity-50"
+              disabled={isLoading}
             >
               <LogIn size={20} />
               Odaya Katıl
@@ -78,6 +85,7 @@ export const Home: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
                 className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                disabled={isLoading}
               />
             </div>
             
@@ -92,16 +100,24 @@ export const Home: React.FC = () => {
                   onChange={(e) => setRoomId(e.target.value)}
                   className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
+                  disabled={isLoading}
                 />
               </div>
             )}
             
             <button
               type="submit"
-              className="w-full bg-blue-500 text-white p-4 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2"
+              className="w-full bg-blue-500 text-white p-4 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 disabled:opacity-50"
+              disabled={isLoading}
             >
-              <Users size={20} />
-              {mode === 'create' ? 'Oda Oluştur' : 'Odaya Katıl'}
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <>
+                  <Users size={20} />
+                  {mode === 'create' ? 'Oda Oluştur' : 'Odaya Katıl'}
+                </>
+              )}
             </button>
             
             <button
@@ -110,7 +126,8 @@ export const Home: React.FC = () => {
                 setMode(null);
                 setError('');
               }}
-              className="w-full text-gray-600 p-4 rounded-lg hover:bg-gray-100"
+              className="w-full text-gray-600 p-4 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+              disabled={isLoading}
             >
               Geri
             </button>

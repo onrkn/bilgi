@@ -1,17 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { socketService } from '../services/socketService';
 import { useGameStore } from '../store/gameStore';
 
 export const useSocket = () => {
   const { setRoom } = useGameStore();
+  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     const initSocket = async () => {
-      await socketService.connect();
-      
-      socketService.onRoomUpdated((room) => {
-        setRoom(room);
-      });
+      if (isConnecting) return;
+      setIsConnecting(true);
+
+      try {
+        await socketService.connect();
+        
+        socketService.onRoomUpdated((room) => {
+          setRoom(room);
+        });
+      } catch (error) {
+        console.error('Failed to connect to socket:', error);
+      } finally {
+        setIsConnecting(false);
+      }
     };
 
     initSocket();
@@ -19,7 +29,7 @@ export const useSocket = () => {
     return () => {
       socketService.disconnect();
     };
-  }, [setRoom]);
+  }, [setRoom, isConnecting]);
 
   return socketService;
 };
